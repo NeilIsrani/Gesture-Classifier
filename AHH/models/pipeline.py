@@ -46,10 +46,37 @@ def show_signal_window(image, window_name="Signal"):
     cv2.waitKey(3000)  # Show for 3 seconds
     cv2.destroyWindow(window_name)
 
-# Initialize components
-palm_detector = PalmDetector()
-keypoint_detector = KeyPointDetector()
-gesture_classifier = GestureClassifier()
+class Pipeline:
+    def __init__(self):
+        self.hand_tracker = HandTracker()
+        self.keypoint_detector = KeypointDetector()
+        self.gesture_classifier = GestureClassifier()
+        
+    def process_frame(self, frame):
+        # Convert to RGB for hand tracking
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Hand tracking
+        hand_boxes = self.hand_tracker.detect_hands(rgb_frame)
+        
+        # Process each detected hand
+        for box in hand_boxes:
+            x, y, w, h = box
+            hand_roi = frame[y:y+h, x:x+w]
+            
+            # Keypoint detection
+            keypoints = self.keypoint_detector.detect_keypoints(hand_roi)
+            
+            if keypoints is not None:
+                # Gesture classification
+                gesture = self.gesture_classifier.classify(keypoints)
+                
+                # Draw results
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                cv2.putText(frame, gesture, (x, y-10), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                
+        return frame
 
 # Start video capture
 cap = cv2.VideoCapture(0)
